@@ -59,6 +59,7 @@ enum rgb_underglow_effect {
     UNDERGLOW_EFFECT_BREATHE,
     UNDERGLOW_EFFECT_SPECTRUM,
     UNDERGLOW_EFFECT_SWIRL,
+    UNDERGLOW_EFFECT_CANDLE,
     UNDERGLOW_EFFECT_NUMBER // Used to track number of underglow effects
 };
 
@@ -84,6 +85,20 @@ static const struct device *const ext_power = DEVICE_DT_GET(DT_INST(0, zmk_ext_p
 #endif
 
 void zmk_rgb_set_ext_power(void);
+
+// Blatently stealing this from
+// https://github.com/cpldcpu/CandleLEDhack/blob/master/Emulator/CandeflickerLED.c
+uint8_t Pseudo_rand(void) {
+    static uint32_t LFSR;
+
+    if (LFSR & 1) {
+        LFSR = (LFSR >> 1);
+    } else {
+        LFSR = (LFSR >> 1) ^ 0x7FFFF159;
+    }
+
+    return (uint8_t)LFSR;
+}
 
 static struct zmk_led_hsb hsb_scale_min_max(struct zmk_led_hsb hsb) {
     hsb.b = CONFIG_ZMK_RGB_UNDERGLOW_BRT_MIN +
@@ -188,6 +203,18 @@ static void zmk_rgb_underglow_effect_swirl(void) {
 
     state.animation_step += state.animation_speed * 2;
     state.animation_step = state.animation_step % HUE_MAX;
+}
+
+static void zmk_rgb_underglow_effect_candle(void) {
+    uint8_t rand_brightness = Pseudo_rand() & 0x1f;
+    for (int i = 0; i < STRIP_NUM_PIXELS; i++) {
+        struct zmk_led_hsb hsb = state.color;
+        hsb.h = 18 % HUE_MAX;
+        hsb.b = (rand_brightness * 3 + 7) % BRT_MAX;
+        // hsb.s = abs(state.animation_step - 1200) / 12;
+
+        pixels[i] = hsb_to_rgb(hsb_scale_zero_max(hsb));
+    }
 }
 
 static int zmk_led_generate_status(void);
@@ -423,6 +450,8 @@ static void zmk_rgb_underglow_tick(struct k_work *work) {
     case UNDERGLOW_EFFECT_SWIRL:
         zmk_rgb_underglow_effect_swirl();
         break;
+    case UNDERGLOW_EFFECT_CANDLE:
+        zmk_rgb_underglow_effect_candle();
     }
 
     zmk_led_write_pixels();
