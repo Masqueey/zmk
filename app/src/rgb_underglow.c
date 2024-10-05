@@ -206,15 +206,21 @@ static void zmk_rgb_underglow_effect_swirl(void) {
 }
 
 static void zmk_rgb_underglow_effect_candle(void) {
-    uint8_t rand_brightness = Pseudo_rand() & 0x1f;
-    for (int i = 0; i < STRIP_NUM_PIXELS; i++) {
-        struct zmk_led_hsb hsb = state.color;
-        hsb.h = 18 % HUE_MAX;
-        hsb.b = (rand_brightness * 3 + 7) % BRT_MAX;
-        // hsb.s = abs(state.animation_step - 1200) / 12;
+    if (state.animation_step % 20 == 0) {
+        for (int i = 0; i < STRIP_NUM_PIXELS; i++) {
+            struct zmk_led_hsb hsb = state.color;
+            hsb.h = 17 % HUE_MAX;
 
-        pixels[i] = hsb_to_rgb(hsb_scale_zero_max(hsb));
+            uint8_t rand_brightness = Pseudo_rand() & 0x1f;
+            hsb.b = (rand_brightness * 3 + 7) % BRT_MAX;
+
+            // hsb.s = abs(state.animation_step - 1200) / 12;
+
+            pixels[i] = hsb_to_rgb(hsb_scale_zero_max(hsb));
+        }
     }
+    state.animation_step += state.animation_speed;
+    state.animation_step = state.animation_step % 65000; // This makes for a very long animation
 }
 
 static int zmk_led_generate_status(void);
